@@ -45,4 +45,4 @@ replace github.com/prysmaticlabs/prysm => github.com/prysmaticlabs/prysm v1.4.2-
 
 replace github.com/google/flatbuffers => github.com/google/flatbuffers v1.11.0
 
-replace github.com/attestantio/go-eth2-client v0.6.30 => github.com/bloxapp/go-eth2-client v0.8.0-1
+replace github.com/attestantio/go-eth2-client v0.6.30 => github.com/bloxapp/go-eth2-client v0.8.2-7
