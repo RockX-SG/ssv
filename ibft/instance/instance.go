@@ -99,6 +99,9 @@ func NewInstanceWithState(state *proto.State) ibft.Instance {
 // NewInstance is the constructor of Instance
 func NewInstance(opts *InstanceOptions) ibft.Instance {
 	pk, role := format.IdentifierUnformat(string(opts.Lambda))
+	logger := opts.Logger.With(zap.Uint64("node_id", opts.ValidatorShare.NodeID),
+		zap.Uint64("seq_num", opts.SeqNumber),
+		zap.String("pubKey", opts.ValidatorShare.PublicKey.SerializeToHexStr()))
 	metricsIBFTStage.WithLabelValues(role, pk).Set(float64(proto.RoundState_NotStarted))
 	ret := &Instance{
 		ValidatorShare: opts.ValidatorShare,
@@ -115,10 +118,8 @@ func NewInstance(opts *InstanceOptions) ibft.Instance {
 		ValueCheck:     opts.ValueCheck,
 		LeaderSelector: opts.LeaderSelector,
 		Config:         opts.Config,
-		Logger: opts.Logger.With(zap.Uint64("node_id", opts.ValidatorShare.NodeID),
-			zap.Uint64("seq_num", opts.SeqNumber),
-			zap.String("pubKey", opts.ValidatorShare.PublicKey.SerializeToHexStr())),
-		signer: opts.Signer,
+		Logger:         logger,
+		signer:         opts.Signer,
 
 		MsgQueue:            opts.Queue,
 		PrePrepareMessages:  msgcontinmem.New(uint64(opts.ValidatorShare.ThresholdSize()), uint64(opts.ValidatorShare.PartialThresholdSize())),
@@ -126,7 +127,7 @@ func NewInstance(opts *InstanceOptions) ibft.Instance {
 		CommitMessages:      msgcontinmem.New(uint64(opts.ValidatorShare.ThresholdSize()), uint64(opts.ValidatorShare.PartialThresholdSize())),
 		ChangeRoundMessages: msgcontinmem.New(uint64(opts.ValidatorShare.ThresholdSize()), uint64(opts.ValidatorShare.PartialThresholdSize())),
 
-		roundTimer: roundtimer.New(),
+		roundTimer: roundtimer.New(logger),
 
 		eventQueue: eventqueue.New(),
 

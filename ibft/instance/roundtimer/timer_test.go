@@ -2,12 +2,13 @@ package roundtimer
 
 import (
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 	"testing"
 	"time"
 )
 
 func TestRoundTimer_Reset(t *testing.T) {
-	timer := New()
+	timer := New(zaptest.NewLogger(t))
 	timer.Reset(time.Millisecond * 100)
 	require.False(t, timer.Stopped())
 	res := <-timer.ResultChan()
@@ -22,7 +23,7 @@ func TestRoundTimer_Reset(t *testing.T) {
 }
 
 func TestRoundTimer_ResetTwice(t *testing.T) {
-	timer := New()
+	timer := New(zaptest.NewLogger(t))
 	timer.Reset(time.Millisecond * 100)
 	<-timer.ResultChan()
 	timer.Reset(time.Millisecond * 100)
@@ -31,7 +32,7 @@ func TestRoundTimer_ResetTwice(t *testing.T) {
 }
 
 func TestRoundTimer_ResetBeforeLapsed(t *testing.T) {
-	timer := New()
+	timer := New(zaptest.NewLogger(t))
 	timer.Reset(time.Millisecond * 100)
 	timer.Reset(time.Millisecond * 300)
 
@@ -43,7 +44,14 @@ func TestRoundTimer_ResetBeforeLapsed(t *testing.T) {
 }
 
 func TestRoundTimer_Stop(t *testing.T) {
-	timer := New()
+	timer := New(zaptest.NewLogger(t))
+
+	timer.Reset(time.Millisecond * 100)
+	go func() {
+		<-time.After(time.Millisecond * 5000)
+	}()
+	require.True(t, <-timer.ResultChan())
+
 	timer.Reset(time.Millisecond * 500)
 	go func() {
 		time.Sleep(time.Millisecond * 100)

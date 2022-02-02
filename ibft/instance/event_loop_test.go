@@ -13,6 +13,7 @@ import (
 	"github.com/bloxapp/ssv/validator/storage"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestChangeRoundTimer(t *testing.T) {
 		},
 		ValueCheck: bytesval.NewEqualBytes([]byte(time.Now().Weekday().String())),
 		Logger:     zaptest.NewLogger(t),
-		roundTimer: roundtimer.New(),
+		roundTimer: roundtimer.New(zap.L()),
 		signer:     newTestSigner(),
 	}
 	go instance.startRoundTimerLoop()

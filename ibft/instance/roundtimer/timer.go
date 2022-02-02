@@ -1,12 +1,14 @@
 package roundtimer
 
 import (
+	"go.uber.org/zap"
 	"sync"
 	"time"
 )
 
 // RoundTimer is a wrapper around timer to fit the use in an iBFT instance
 type RoundTimer struct {
+	logger  *zap.Logger
 	timer   *time.Timer
 	lapsedC chan bool
 	resC    chan bool
@@ -17,8 +19,9 @@ type RoundTimer struct {
 }
 
 // New returns a new instance of RoundTimer
-func New() *RoundTimer {
+func New(logger *zap.Logger) *RoundTimer {
 	ret := &RoundTimer{
+		logger:   logger,
 		timer:    nil,
 		lapsedC:  make(chan bool),
 		killC:    make(chan bool),
@@ -54,10 +57,12 @@ func (t *RoundTimer) CloseChan() {
 func (t *RoundTimer) fireChannelEvent(value bool) {
 	t.syncLock.RLock()
 	defer t.syncLock.RUnlock()
+	t.logger.Debug("fireChannelEvent")
 
 	if t.resC != nil {
 		t.resC <- value
 	}
+	t.logger.Debug("fireChannelEvent after send")
 }
 
 // Reset will return a channel that sends true if the timer lapsed or false if it was cancelled
@@ -87,16 +92,19 @@ func (t *RoundTimer) Stopped() bool {
 
 // Kill will stop the timer (without the ability to restart it) and send false on the result chan
 func (t *RoundTimer) Kill() {
+	t.logger.Debug("Kill before lock")
 	t.syncLock.Lock()
+	t.logger.Debug("Kill after lock")
 
 	if t.timer != nil {
 		t.timer.Stop()
 	}
 	t.stopped = true
 	t.killC <- true
+	t.logger.Debug("Kill after chansend")
 
 	t.syncLock.Unlock()
-
+	t.logger.Debug("Kill after lock")
 	go t.fireChannelEvent(false)
 }
 
@@ -105,11 +113,13 @@ loop:
 	for {
 		select {
 		case <-t.lapsedC:
+			t.logger.Debug("lapsedC")
 			t.syncLock.Lock()
 			t.stopped = true
 			t.syncLock.Unlock()
 			go t.fireChannelEvent(true)
 		case <-t.killC:
+			t.logger.Debug("killC")
 			break loop
 		}
 	}
