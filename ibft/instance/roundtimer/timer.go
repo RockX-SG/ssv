@@ -103,9 +103,12 @@ func (t *RoundTimer) Kill() {
 	t.logger.Debug("Kill after lock")
 
 	if t.timer != nil {
+		t.logger.Debug("Kill before timer stop")
 		t.timer.Stop()
+		t.logger.Debug("Kill after timer stop")
 	}
 	t.stopped = true
+	t.logger.Debug("Kill after stopped")
 	t.killC <- true
 	t.logger.Debug("Kill after chansend")
 
