@@ -78,6 +78,7 @@ func (t *RoundTimer) Reset(d time.Duration) {
 		t.timer.Reset(d)
 	} else {
 		t.timer = time.AfterFunc(d, func() {
+
 			//t.syncLock.Lock()
 			//defer t.syncLock.Unlock()
 			//
