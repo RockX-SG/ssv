@@ -15,6 +15,7 @@ type RoundTimer struct {
 	killC   chan bool
 
 	stopped  bool
+	stopLock sync.RWMutex
 	syncLock sync.RWMutex
 }
 
@@ -26,6 +27,7 @@ func New(logger *zap.Logger) *RoundTimer {
 		lapsedC:  make(chan bool),
 		killC:    make(chan bool),
 		stopped:  true,
+		stopLock: sync.RWMutex{},
 		syncLock: sync.RWMutex{},
 	}
 	go ret.eventLoop()
@@ -71,7 +73,9 @@ func (t *RoundTimer) Reset(d time.Duration) {
 	t.syncLock.Lock()
 	defer t.syncLock.Unlock()
 
+	t.syncLock.RLock()
 	t.stopped = false
+	t.syncLock.RUnlock()
 
 	if t.timer != nil {
 		t.timer.Stop()
@@ -92,8 +96,8 @@ func (t *RoundTimer) Reset(d time.Duration) {
 
 // Stopped returns true if there is no running timer
 func (t *RoundTimer) Stopped() bool {
-	t.syncLock.RLock()
-	defer t.syncLock.RUnlock()
+	t.stopLock.Lock()
+	defer t.stopLock.Unlock()
 	return t.stopped
 }
 
@@ -108,8 +112,13 @@ func (t *RoundTimer) Kill() {
 		t.timer.Stop()
 		t.logger.Debug("Kill after timer stop")
 	}
+
+	t.logger.Debug("Kill stopped lock")
+	t.stopLock.RLock()
 	t.stopped = true
+	t.stopLock.RUnlock()
 	t.logger.Debug("Kill after stopped")
+
 	t.killC <- true
 	t.logger.Debug("Kill after chansend")
 
@@ -123,6 +132,10 @@ loop:
 	for {
 		select {
 		case <-t.lapsedC:
+			if t.Stopped() {
+				break
+			}
+
 			t.logger.Debug("lapsedC")
 			t.syncLock.Lock()
 			t.stopped = true
